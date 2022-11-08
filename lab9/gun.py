@@ -40,7 +40,7 @@ class Ball:
         self.screen = screen
         self.x = x
         self.y = y
-        self.r = 10
+        self.r = 5
         self.vx = 0
         self.vy = 0
         self.color = choice(GAME_COLORS)
@@ -48,9 +48,9 @@ class Ball:
         self.ignited = False
         self.balltype = sballtype
         if sballtype == 1:
-            self.r = 20
+            self.r = 10
         elif sballtype == 2:
-            self.r = 30
+            self.r = 20
 
     def move(self, dtime=100):
         """
@@ -60,7 +60,6 @@ class Ball:
         self.vx и self.vy, силы гравитации, действующей на мяч
         и стен по краям окна (размер окна 800х600).
         """
-        # FIXME
         self.x += self.vx * dtime
         self.y += self.vy * dtime
         self.vy += GRAVITY * dtime
@@ -96,12 +95,14 @@ class Ball:
 
 
 class Gun:
-    def __init__(self, screen):
+    def __init__(self, screen, color1=RED, color2=YELLOW):
         self.screen = screen
         self.f2_power = 10
         self.f2_on = 0
         self.an = 1
-        self.color = GREY
+        self.color1 = color1
+        self.color2 = color2
+        self.color = color1
         self.pos = [40, 450]
         self.vel = [0, 0]
         self.balltype = 0
@@ -135,29 +136,37 @@ class Gun:
             self.an = math.atan2((event.pos[1]-self.pos[1]),
                                  (event.pos[0]-self.pos[0]))
         if self.f2_on:
-            self.color = RED
+            self.color = self.color2
         else:
-            self.color = GREY
+            self.color = self.color1
 
     def draw(self):
+        pygame.draw.line(self.screen, GREY,
+                         self.pos, self.getGunEndFixed(), 5)
+        pygame.draw.rect(self.screen, GREY,
+                         [self.pos[0]-5, self.pos[1] - 5, 10, 10])
+        pygame.draw.rect(self.screen, GREY,
+                         [self.pos[0]-10, self.pos[1] + 5, 20, 10])
         pygame.draw.line(self.screen, self.color,
-                         self.pos, self.getGunEnd(), 5)
-        pygame.draw.rect(self.screen, self.color,
-                         [self.pos[0]-5, self.pos[1]-5, 10, 10])
-        pygame.draw.rect(self.screen, self.color,
-                         [self.pos[0]-10, self.pos[1]+5, 20, 10])
+                         [self.pos[0]-10, self.pos[1] - 10],
+                         [self.pos[0] - 10 + 0.2 * self.f2_power,
+                          self.pos[1] - 10], 5)
 
     def getGunEnd(self):
-        return (self.pos[0]+self.f2_power*math.cos(self.an),
-                self.pos[1]+self.f2_power*math.sin(self.an))
+        return (self.pos[0] + self.f2_power * math.cos(self.an),
+                self.pos[1] + self.f2_power * math.sin(self.an))
+
+    def getGunEndFixed(self):
+        return (self.pos[0] + 20 * math.cos(self.an),
+                self.pos[1] + 20 * math.sin(self.an))
 
     def power_up(self):
         if self.f2_on:
             if self.f2_power < 100:
                 self.f2_power += 1
-            self.color = RED
+            self.color = self.color2
         else:
-            self.color = GREY
+            self.color = self.color1
 
     def turn(self, dx, dy):
         self.vel[0] = dx * 10
@@ -229,9 +238,9 @@ class Target:
         self.y += self.vy * dtime
         self.vy += GRAVITY * dtime
 
-        if self.x > WIDTH or self.x < 0:
+        if self.x >= WIDTH - self.r or self.x <= self.r:
             self.vx = -self.vx
-        if self.y > HEIGHT or self.y < 0:
+        if self.y >= HEIGHT - self.r or self.y <= self.r:
             self.vy = -self.vy
 
 
