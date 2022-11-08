@@ -4,10 +4,10 @@ from random import randint as rnd
 
 import pygame
 
-TARGET_COUNT = 2
-SPEED_MULT = 30
-GRAVITY = 0.15
-DISSIPATION = 0.3
+TARGET_COUNT = 2    # максимальное число целей на экране
+SPEED_MULT = 30     # замедление скорости анимирования
+GRAVITY = 0.15      # сила тяжести
+DISSIPATION = 0.3   # сила трения
 
 FPS = 30
 
@@ -24,6 +24,8 @@ GAME_COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 
 WIDTH = 800
 HEIGHT = 600
+
+SCORE_TEXT_POSITION = (0, 0)
 
 
 def hypot(x1, x2, y1, y2):  # расстояние между двумя точками
@@ -122,18 +124,24 @@ class Gun:
     """
     def __init__(self, screen, color1=RED, color2=YELLOW):
         """
-        color1 - цвет шкалы
-        color2 - цвет шкалы FIXME
+        color1 - цвет неактивной шкалы
+        color2 - цвет активной шкалы
         """
         self.screen = screen
-        self.f2_power = 10
-        self.f2_on = 0
-        self.an = 1
+        self.font = pygame.font.SysFont('Comic Sans MS', 15)
+        self.typeNames = "123"
+
         self.color1 = color1
         self.color2 = color2
         self.color = color1
+
+        self.f2_power = 10
+        self.f2_on = 0
+        self.an = 1
+
         self.pos = [40, 450]
         self.vel = [0, 0]
+
         self.balltype = 0
 
     def fire2_start(self, event):
@@ -184,6 +192,9 @@ class Gun:
                          [self.pos[0]-10, self.pos[1] - 10],
                          [self.pos[0] - 10 + 0.2 * self.f2_power,
                           self.pos[1] - 10], 5)
+        screen.blit(
+            self.font.render(self.typeNames[self.balltype], False, BLUE),
+                            (self.pos[0]-5, self.pos[1] - 5))
 
     def getGunEndFixed(self):
         """
@@ -286,14 +297,20 @@ class Target:
             self.vx += rnd(-1, 1)
             self.vy += rnd(-1, 1)
 
+            self.color1 = choice(GAME_COLORS)
+
         self.x += self.vx * dtime
         self.y += self.vy * dtime
         self.vy += GRAVITY * dtime
 
-        if self.x >= WIDTH - self.r or self.x <= self.r:
-            self.vx = -self.vx
-        if self.y >= HEIGHT - self.r or self.y <= self.r:
-            self.vy = -self.vy
+        if self.x >= WIDTH - self.r:
+            self.vx = -abs(self.vx)
+        if self.x <= self.r:
+            self.vx = abs(self.vx)
+        if self.y >= HEIGHT - self.r:
+            self.vy = -abs(self.vy)
+        if self.y <= self.r:
+            self.vy = abs(self.vy)
 
 
 class Game:
@@ -302,14 +319,23 @@ class Game:
     """
     def __init__(self, screen, tmax=1):
         self.screen = screen
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont('Comic Sans MS', 30)
 
         self.bullet = 0
+        self.tagretCtn = tmax
         self.balls = []
         self.targets = [Target(screen) for _ in range(tmax)]
         self.targetsMax = tmax
         self.dtm = 100
+        self.youLose = False
 
         self.gun = Gun(screen)
+
+    def __str__(self):
+        """Возвращает очки"""
+        return f"Выпущено снарядов: {self.bullet}    " + \
+               "Поражено целей: {self.tagretCtn}"
 
     def drawBallsAndTargets(self):
         """
@@ -333,12 +359,18 @@ class Game:
         """
         for t in self.targets:
             t.move(self.getInterval())
+            if not t.isSimple:
+                if hypot(t.x, self.gun.pos[0], t.y, self.gun.pos[1]) \
+                        <= t.r + 5:
+                    self.youLose = True
+                    self.repaint()
         for b in range(len(self.balls)):
-            b.move(self.getInterval())
+            self.balls[b].move(self.getInterval())
             for i in range(len(self.targets)):
                 if self.balls[b].hittest(self.targets[i]):
                     if self.targets[i].hit():
                         self.targets[i] = Target(screen)
+                        self.tagretCtn += 1
                         self.balls[b].ignite()
         try:
             for b in range(len(self.balls))[::-1]:
@@ -351,7 +383,7 @@ class Game:
         """
         Ждёт некторое время перед следующей отрисовкой
         """
-        self.dtm = clock.tick(FPS)
+        self.dtm = self.clock.tick(FPS)
 
     def getInterval(self):
         """
@@ -376,20 +408,34 @@ class Game:
         elif event.key == pygame.K_3:
             self.gun.changebullet(2)
 
+    def repaint(self):
+        if not self.youLose:
+            self.screen.fill(WHITE)
+            self.drawGun()
+            self.drawBallsAndTargets()
+            self.screen.blit(
+                self.font.render(str(self), False, GREEN),
+                SCORE_TEXT_POSITION)
+            pygame.display.update()
+            self.delay()
+        else:
+            self.screen.fill(BLACK)
+            self.screen.blit(
+                pygame.font.SysFont('Comic Sans MS', 50).render(
+                    "YOU LOSE", False, RED),
+                SCORE_TEXT_POSITION)
+            pygame.display.update()
+            pygame.time.delay(5000)
+            pygame.quit()
+
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
 finished = False
 
 myGame = Game(screen, TARGET_COUNT)
 
 while not finished:
-    screen.fill(WHITE)
-    myGame.drawGun()
-    myGame.drawBallsAndTargets()
-    pygame.display.update()
-    myGame.delay()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -408,5 +454,6 @@ while not finished:
     myGame.checking()
     myGame.gun.move(myGame.getInterval())
     myGame.gun.power_up()
+    myGame.repaint()
 
 pygame.quit()
