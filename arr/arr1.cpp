@@ -23,9 +23,7 @@ public:
     //   конструктор, который можно вызвать без
     //   без параметров, либо он ему не нужен.
     //
-    Array(const Array & c){
-        m_cnt = c.m_cnt;
-        delete[] m_arr;
+    Array(const Array & c) : m_cnt(c.m_cnt), m_arr(new T[m_cnt]) {
          for(size_t i=0;i<c;i++){
             m_arr[i] = c[i];
         }
@@ -34,8 +32,8 @@ public:
     //   копию параметра. Считайте, что для типа
     //   T определен оператор присваивания.
     //
-    Array(const Array && a){
-        m_cnt = a.m_cnt;
+    Array(Array && a){
+        swap(m_cnt,a.m_cnt);//m_cnt = a.m_cnt;
         swap(a.m_arr.m_arr);
     }
     //
@@ -47,7 +45,9 @@ public:
     Array& operator=(const Array & a){
         if(&a != this) {
             m_cnt = a.m_cnt;
-            memcpy(m_arr, a.m_arr, m_cnt);
+            for(size_t i=0;i<m_cnt;i++){
+                m_arr[i] = a[i];
+            }
         }
         return *this;
     }
@@ -103,6 +103,8 @@ int main()
         Array<char> c(15, 'e');
         print(c);  
     }
+    
+    b=a;
     
     
     print(a);

@@ -1,5 +1,3 @@
-//-fsanitize=leak -fsanitize=addres -Wall - Wextra
-
 #include <iostream>
 
 using namespace std;
@@ -31,8 +29,7 @@ public:
 
     Array(const Array & c){
         m_cnt = c.m_cnt;
-        delete[] m_arr;
-         for(size_t i=0;i<c.size;i++){
+        for(size_t i=0;i<c.size;i++){
             new (&m_arr[i]) T(c[i]);
         }
     }
@@ -40,8 +37,8 @@ public:
     //   копию параметра. Считайте, что для типа
     //   T не определен оператор присваивания.
     //
-    Array(const Array && a){
-        m_cnt = a.m_cnt;
+    Array(Array && a){
+        swap(m_cnt,a.m_cnt);//m_cnt = a.m_cnt;
         swap(a.m_arr.m_arr);
     }
     //   конструктор перемещения
@@ -53,7 +50,10 @@ public:
     Array& operator=(const Array & a){
         if(&a != this) {
             m_cnt = a.m_cnt;
-            memcpy(m_arr, a.m_arr, m_cnt);
+            delete[] m_arr;
+            for(size_t i=0;i<a.size;i++){
+                new (&m_arr[i]) T(a[i]);
+            }
         }
         return *this;
     }
